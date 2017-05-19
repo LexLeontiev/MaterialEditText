@@ -68,5 +68,13 @@
     <!-- Whether check the characters count at the beginning it's shown. True by default. -->
     <attr name="met_checkCharactersCountAtBeginning" format="boolean"/>
 
+    <attr name="met_isRequire" format="boolean"/>
+    <attr name="met_hint" format="string"/>
+    <attr name="met_state">
+      <enum name="view_only" value="1"/>
+      <enum name="edit_enable" value="2"/>
+      <enum name="edit_disable" value="3"/>
+    </attr>
+
   </declare-styleable>
 </resources>
