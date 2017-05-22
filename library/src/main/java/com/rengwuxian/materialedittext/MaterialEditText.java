@@ -129,6 +129,11 @@ public class MaterialEditText extends AppCompatEditText {
   private int baseColor;
 
   /**
+   * the secondary color of the line and the texts. Uses for disable mode.
+   */
+  private int secondaryColor;
+
+  /**
    * inner top padding
    */
   private int innerPaddingTop;
@@ -179,7 +184,7 @@ public class MaterialEditText extends AppCompatEditText {
   private boolean floatingLabelAlwaysShown;
 
   /**
-   * Always show the helper text, no matter if the edit text is focused. False by default.
+   * Always show the helper text, no matter if the edit text is focused. True by default.
    */
   private boolean helperTextAlwaysShown;
 
@@ -377,6 +382,7 @@ public class MaterialEditText extends AppCompatEditText {
     textColorStateList = typedArray.getColorStateList(R.styleable.MaterialEditText_met_textColor);
     textColorHintStateList = typedArray.getColorStateList(R.styleable.MaterialEditText_met_textColorHint);
     baseColor = typedArray.getColor(R.styleable.MaterialEditText_met_baseColor, defaultBaseColor);
+    secondaryColor = typedArray.getColor(R.styleable.MaterialEditText_met_secondaryColor, -1);
 
     // retrieve the default primaryColor
     int defaultPrimaryColor;
@@ -411,7 +417,7 @@ public class MaterialEditText extends AppCompatEditText {
     maxCharacters = typedArray.getInt(R.styleable.MaterialEditText_met_maxCharacters, 0);
     singleLineEllipsis = typedArray.getBoolean(R.styleable.MaterialEditText_met_singleLineEllipsis, false);
     helperText = typedArray.getString(R.styleable.MaterialEditText_met_helperText);
-    helperTextColor = typedArray.getColor(R.styleable.MaterialEditText_met_helperTextColor, -1);
+    helperTextColor = typedArray.getColor(R.styleable.MaterialEditText_met_helperTextColor, secondaryColor);
     minBottomTextLines = typedArray.getInt(R.styleable.MaterialEditText_met_minBottomTextLines, 0);
     String fontPathForAccent = typedArray.getString(R.styleable.MaterialEditText_met_accentTypeface);
     if (fontPathForAccent != null && !isInEditMode()) {
@@ -431,11 +437,11 @@ public class MaterialEditText extends AppCompatEditText {
     }
     floatingLabelPadding = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_floatingLabelPadding, bottomSpacing);
     floatingLabelTextSize = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_floatingLabelTextSize, getResources().getDimensionPixelSize(R.dimen.floating_label_text_size));
-    floatingLabelTextColor = typedArray.getColor(R.styleable.MaterialEditText_met_floatingLabelTextColor, -1);
+    floatingLabelTextColor = typedArray.getColor(R.styleable.MaterialEditText_met_floatingLabelTextColor, secondaryColor);
     floatingLabelAnimating = typedArray.getBoolean(R.styleable.MaterialEditText_met_floatingLabelAnimating, true);
     bottomTextSize = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_bottomTextSize, getResources().getDimensionPixelSize(R.dimen.bottom_text_size));
     hideUnderline = typedArray.getBoolean(R.styleable.MaterialEditText_met_hideUnderline, false);
-    underlineColor = typedArray.getColor(R.styleable.MaterialEditText_met_underlineColor, -1);
+    underlineColor = typedArray.getColor(R.styleable.MaterialEditText_met_underlineColor, secondaryColor);
     autoValidate = typedArray.getBoolean(R.styleable.MaterialEditText_met_autoValidate, false);
     iconLeftBitmaps = generateIconBitmaps(typedArray.getResourceId(R.styleable.MaterialEditText_met_iconLeft, -1));
     iconRightBitmaps = generateIconBitmaps(typedArray.getResourceId(R.styleable.MaterialEditText_met_iconRight, -1));
@@ -443,11 +449,11 @@ public class MaterialEditText extends AppCompatEditText {
     clearButtonBitmaps = generateIconBitmaps(R.drawable.met_ic_clear);
     iconPadding = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_iconPadding, getPixel(16));
     floatingLabelAlwaysShown = typedArray.getBoolean(R.styleable.MaterialEditText_met_floatingLabelAlwaysShown, false);
-    helperTextAlwaysShown = typedArray.getBoolean(R.styleable.MaterialEditText_met_helperTextAlwaysShown, false);
+    helperTextAlwaysShown = typedArray.getBoolean(R.styleable.MaterialEditText_met_helperTextAlwaysShown, true);
     validateOnFocusLost = typedArray.getBoolean(R.styleable.MaterialEditText_met_validateOnFocusLost, false);
     checkCharactersCountAtBeginning = typedArray.getBoolean(R.styleable.MaterialEditText_met_checkCharactersCountAtBeginning, true);
     isRequire = typedArray.getBoolean(R.styleable.MaterialEditText_met_isRequire, false);
-    currentState = typedArray.getInteger(R.styleable.MaterialEditText_met_state, STATE_VIEW_ONLY);
+    currentState = typedArray.getInteger(R.styleable.MaterialEditText_met_state, STATE_EDIT_ENABLE);
     typedArray.recycle();
 
     int[] paddings = new int[]{
@@ -1074,7 +1080,7 @@ public class MaterialEditText extends AppCompatEditText {
 
   private void resetHintTextColor() {
     if (textColorHintStateList == null) {
-      setHintTextColor(baseColor & 0x00ffffff | 0x44000000);
+      setHintTextColor(baseColor);
     } else {
       setHintTextColor(textColorHintStateList);
     }
@@ -1418,6 +1424,7 @@ public class MaterialEditText extends AppCompatEditText {
     // draw the underline
     if (!hideUnderline) {
       lineStartY += bottomSpacing;
+//      lineStartY += getPixel(5);
       if (!isInternalValid()) { // not valid
         paint.setColor(errorColor);
         canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(2), paint);
@@ -1495,7 +1502,7 @@ public class MaterialEditText extends AppCompatEditText {
       }
 
       // calculate the alpha
-      int alpha = ((int) ((floatingLabelAlwaysShown ? 1 : floatingLabelFraction) * 0xff * (0.74f * focusFraction * (isEnabled() ? 1 : 0) + 0.26f) * (floatingLabelTextColor != -1 ? 1 : Color.alpha(floatingLabelTextColor) / 256f)));
+      int alpha = ((int) ((floatingLabelAlwaysShown ? 1 : floatingLabelFraction) * 0xff * (0.74f * focusFraction + 0.26f) * (floatingLabelTextColor != -1 ? 1 : Color.alpha(floatingLabelTextColor) / 256f)));
       textPaint.setAlpha(alpha);
       asteriskPaint.setAlpha(alpha);
 

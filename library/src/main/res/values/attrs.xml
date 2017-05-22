@@ -3,6 +3,8 @@
   <declare-styleable name="MaterialEditText">
     <!-- The base color of the line and the texts. Default is black. -->
     <attr name="met_baseColor" format="color" />
+    <!-- The secondary color of the line and the texts. Uses for disable mode. -->
+    <attr name="met_secondaryColor" format="color" />
     <!-- The highlight color of the line, and the floating label if the highlightFloatingLabel is true. -->
     <attr name="met_primaryColor" format="color" />
     <!-- How the floating label should be shown. Default is highlight -->
@@ -55,7 +57,7 @@
     <attr name="met_bottomTextSize" format="dimension" />
     <!-- Always show the floating label, instead of animating it in/out. False by default. -->
     <attr name="met_floatingLabelAlwaysShown" format="boolean" />
-    <!-- Always show the helper text, no matter if the edit text is focused. False by default. -->
+    <!-- Always show the helper text, no matter if the edit text is focused. True by default. -->
     <attr name="met_helperTextAlwaysShown" format="boolean" />
     <!-- Whether use animation to show/hide the floating label. True by default. -->
     <attr name="met_floatingLabelAnimating" format="boolean"/>
