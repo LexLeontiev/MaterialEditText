@@ -21,11 +21,14 @@ import android.support.annotation.Nullable;
 import android.support.v7.widget.AppCompatEditText;
 import android.text.Editable;
 import android.text.Layout;
+import android.text.Spannable;
+import android.text.SpannableString;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.method.TransformationMethod;
+import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -53,6 +56,13 @@ public class MaterialEditText extends AppCompatEditText {
   @IntDef({FLOATING_LABEL_NONE, FLOATING_LABEL_NORMAL, FLOATING_LABEL_HIGHLIGHT})
   public @interface FloatingLabelType {
   }
+
+  public static final int STATE_VIEW_ONLY = 1;
+  public static final int STATE_EDIT_ENABLE = 2;
+  public static final int STATE_EDIT_DISABLE = 3;
+
+  public static final String ASTERISK = " *";
+  public static final String STATE_VIEW_EMPTY_INPUT = "–";
 
   public static final int FLOATING_LABEL_NONE = 0;
   public static final int FLOATING_LABEL_NORMAL = 1;
@@ -239,6 +249,11 @@ public class MaterialEditText extends AppCompatEditText {
   private Typeface typeface;
 
   /**
+   * Text with field description in the input
+   */
+  private String hint;
+
+  /**
    * Text for the floatLabel if different from the hint
    */
   private CharSequence floatingLabelText;
@@ -274,6 +289,11 @@ public class MaterialEditText extends AppCompatEditText {
   private boolean checkCharactersCountAtBeginning;
 
   /**
+   * Show asterisk in the end of hint and label if true
+   */
+  private boolean isRequire;
+
+  /**
    * Left Icon
    */
   private Bitmap[] iconLeftBitmaps;
@@ -293,6 +313,11 @@ public class MaterialEditText extends AppCompatEditText {
    */
   private boolean validateOnFocusLost;
 
+  /**
+   * State of the view, describes it's behaviour
+   */
+  private int currentState;
+
   private boolean showClearButton;
   private boolean firstShown;
   private int iconSize;
@@ -306,6 +331,8 @@ public class MaterialEditText extends AppCompatEditText {
   private ArgbEvaluator focusEvaluator = new ArgbEvaluator();
   Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
   TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+  TextPaint asteriskPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+  ForegroundColorSpan asteriskSpan;
   StaticLayout textLayout;
   ObjectAnimator labelAnimator;
   ObjectAnimator labelFocusAnimator;
@@ -333,7 +360,7 @@ public class MaterialEditText extends AppCompatEditText {
 
   private void init(Context context, AttributeSet attrs) {
     if (isInEditMode()) {
-        return;
+      return;
     }
 
     iconSize = getPixel(32);
@@ -376,8 +403,10 @@ public class MaterialEditText extends AppCompatEditText {
     }
 
     primaryColor = typedArray.getColor(R.styleable.MaterialEditText_met_primaryColor, defaultPrimaryColor);
-    setFloatingLabelInternal(typedArray.getInt(R.styleable.MaterialEditText_met_floatingLabel, 0));
+    setFloatingLabelInternal(typedArray.getInt(R.styleable.MaterialEditText_met_floatingLabel, 2));
     errorColor = typedArray.getColor(R.styleable.MaterialEditText_met_errorColor, Color.parseColor("#e7492E"));
+    asteriskSpan = new ForegroundColorSpan(errorColor);
+    asteriskPaint.setColor(errorColor);
     minCharacters = typedArray.getInt(R.styleable.MaterialEditText_met_minCharacters, 0);
     maxCharacters = typedArray.getInt(R.styleable.MaterialEditText_met_maxCharacters, 0);
     singleLineEllipsis = typedArray.getBoolean(R.styleable.MaterialEditText_met_singleLineEllipsis, false);
@@ -388,6 +417,7 @@ public class MaterialEditText extends AppCompatEditText {
     if (fontPathForAccent != null && !isInEditMode()) {
       accentTypeface = getCustomTypeface(fontPathForAccent);
       textPaint.setTypeface(accentTypeface);
+      asteriskPaint.setTypeface(accentTypeface);
     }
     String fontPathForView = typedArray.getString(R.styleable.MaterialEditText_met_typeface);
     if (fontPathForView != null && !isInEditMode()) {
@@ -395,8 +425,9 @@ public class MaterialEditText extends AppCompatEditText {
       setTypeface(typeface);
     }
     floatingLabelText = typedArray.getString(R.styleable.MaterialEditText_met_floatingLabelText);
+    hint = typedArray.getString(R.styleable.MaterialEditText_met_hint);
     if (floatingLabelText == null) {
-      floatingLabelText = getHint();
+      floatingLabelText = hint;
     }
     floatingLabelPadding = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_floatingLabelPadding, bottomSpacing);
     floatingLabelTextSize = typedArray.getDimensionPixelSize(R.styleable.MaterialEditText_met_floatingLabelTextSize, getResources().getDimensionPixelSize(R.dimen.floating_label_text_size));
@@ -415,14 +446,16 @@ public class MaterialEditText extends AppCompatEditText {
     helperTextAlwaysShown = typedArray.getBoolean(R.styleable.MaterialEditText_met_helperTextAlwaysShown, false);
     validateOnFocusLost = typedArray.getBoolean(R.styleable.MaterialEditText_met_validateOnFocusLost, false);
     checkCharactersCountAtBeginning = typedArray.getBoolean(R.styleable.MaterialEditText_met_checkCharactersCountAtBeginning, true);
+    isRequire = typedArray.getBoolean(R.styleable.MaterialEditText_met_isRequire, false);
+    currentState = typedArray.getInteger(R.styleable.MaterialEditText_met_state, STATE_VIEW_ONLY);
     typedArray.recycle();
 
     int[] paddings = new int[]{
-        android.R.attr.padding, // 0
-        android.R.attr.paddingLeft, // 1
-        android.R.attr.paddingTop, // 2
-        android.R.attr.paddingRight, // 3
-        android.R.attr.paddingBottom // 4
+            android.R.attr.padding, // 0
+            android.R.attr.paddingLeft, // 1
+            android.R.attr.paddingTop, // 2
+            android.R.attr.paddingRight, // 3
+            android.R.attr.paddingBottom // 4
     };
     TypedArray paddingsTypedArray = context.obtainStyledAttributes(attrs, paddings);
     int padding = paddingsTypedArray.getDimensionPixelSize(0, 0);
@@ -442,9 +475,12 @@ public class MaterialEditText extends AppCompatEditText {
       setSingleLine();
       setTransformationMethod(transformationMethod);
     }
+
+    initState();
     initMinBottomLines();
     initPadding();
     initText();
+    initHint();
     initFloatingLabel();
     initTextWatcher();
     checkCharactersCount();
@@ -463,6 +499,21 @@ public class MaterialEditText extends AppCompatEditText {
       resetHintTextColor();
     }
     resetTextColor();
+  }
+
+  private void initHint() {
+    if (!TextUtils.isEmpty(hint)) {
+      if (isRequire && currentState == STATE_EDIT_ENABLE) {
+        SpannableString span = new SpannableString(hint + ASTERISK);
+        span.setSpan(asteriskSpan, hint.length(), span.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        setHint(span);
+      }
+      else {
+        setHint(hint);
+      }
+    } else {
+      setHint(null);
+    }
   }
 
   private void initTextWatcher() {
@@ -488,8 +539,51 @@ public class MaterialEditText extends AppCompatEditText {
     });
   }
 
+  private void initState() {
+    switchState();
+  }
+
+  private void switchState() {
+    switch (currentState) {
+      case STATE_VIEW_ONLY: {
+        setEnabled(false);
+        if (TextUtils.isEmpty(getText())) {
+          setText(STATE_VIEW_EMPTY_INPUT);
+        }
+        initHint();
+        break;
+      }
+      case STATE_EDIT_ENABLE: {
+        setEnabled(true);
+        initHint();
+        if (TextUtils.equals(getText(), STATE_VIEW_EMPTY_INPUT)) {
+          setText(null);
+        }
+        break;
+      }
+      case STATE_EDIT_DISABLE: {
+        setEnabled(false);
+        if (TextUtils.equals(getText(), STATE_VIEW_EMPTY_INPUT)) {
+          setText(null);
+        }
+        initHint();
+        break;
+      }
+    }
+  }
+
   private Typeface getCustomTypeface(@NonNull String fontPath) {
     return Typeface.createFromAsset(getContext().getAssets(), fontPath);
+  }
+
+  public void setState(int state) {
+    currentState = state;
+    switchState();
+    invalidate();
+  }
+
+  public int getState() {
+    return currentState;
   }
 
   public void setIconLeft(@DrawableRes int res) {
@@ -653,6 +747,7 @@ public class MaterialEditText extends AppCompatEditText {
   public void setAccentTypeface(Typeface accentTypeface) {
     this.accentTypeface = accentTypeface;
     this.textPaint.setTypeface(accentTypeface);
+    this.asteriskPaint.setTypeface(accentTypeface);
     postInvalidate();
   }
 
@@ -682,6 +777,7 @@ public class MaterialEditText extends AppCompatEditText {
 
   /**
    * Set the color of the underline for normal state
+   *
    * @param color
    */
   public void setUnderlineColor(int color) {
@@ -701,7 +797,7 @@ public class MaterialEditText extends AppCompatEditText {
    * @param floatingLabelText
    */
   public void setFloatingLabelText(@Nullable CharSequence floatingLabelText) {
-    this.floatingLabelText = floatingLabelText == null ? getHint() : floatingLabelText;
+    this.floatingLabelText = floatingLabelText == null ? hint : floatingLabelText;
     postInvalidate();
   }
 
@@ -739,8 +835,9 @@ public class MaterialEditText extends AppCompatEditText {
   private void initPadding() {
     extraPaddingTop = floatingLabelEnabled ? floatingLabelTextSize + floatingLabelPadding : floatingLabelPadding;
     textPaint.setTextSize(bottomTextSize);
+    asteriskPaint.setTextSize(bottomTextSize);
     Paint.FontMetrics textMetrics = textPaint.getFontMetrics();
-    extraPaddingBottom = (int) ((textMetrics.descent - textMetrics.ascent) * currentBottomLines) + (hideUnderline ? bottomSpacing : bottomSpacing * 2);
+    extraPaddingBottom = (int) ((textMetrics.descent - textMetrics.ascent) * currentBottomLines) + (bottomSpacing * 2);
     extraPaddingLeft = iconLeftBitmaps == null ? 0 : (iconOuterWidth + iconPadding);
     extraPaddingRight = iconRightBitmaps == null ? 0 : (iconOuterWidth + iconPadding);
     correctPaddings();
@@ -818,10 +915,11 @@ public class MaterialEditText extends AppCompatEditText {
     }
     int destBottomLines;
     textPaint.setTextSize(bottomTextSize);
+    asteriskPaint.setTextSize(bottomTextSize);
     if (tempErrorText != null || helperText != null) {
       Layout.Alignment alignment = (getGravity() & Gravity.RIGHT) == Gravity.RIGHT || isRTL() ?
-          Layout.Alignment.ALIGN_OPPOSITE : (getGravity() & Gravity.LEFT) == Gravity.LEFT ?
-          Layout.Alignment.ALIGN_NORMAL : Layout.Alignment.ALIGN_CENTER;
+              Layout.Alignment.ALIGN_OPPOSITE : (getGravity() & Gravity.LEFT) == Gravity.LEFT ?
+              Layout.Alignment.ALIGN_NORMAL : Layout.Alignment.ALIGN_CENTER;
       textLayout = new StaticLayout(tempErrorText != null ? tempErrorText : helperText, textPaint, getWidth() - getBottomTextLeftOffset() - getBottomTextRightOffset() - getPaddingLeft() - getPaddingRight(), alignment, 1.0f, 0.0f, true);
       destBottomLines = Math.max(textLayout.getLineCount(), minBottomTextLines);
     } else {
@@ -951,7 +1049,7 @@ public class MaterialEditText extends AppCompatEditText {
 
   private void resetTextColor() {
     if (textColorStateList == null) {
-      textColorStateList = new ColorStateList(new int[][]{new int[]{android.R.attr.state_enabled}, EMPTY_STATE_SET}, new int[]{baseColor & 0x00ffffff | 0xdf000000, baseColor & 0x00ffffff | 0x44000000});
+      textColorStateList = new ColorStateList(new int[][]{new int[]{android.R.attr.state_enabled}, EMPTY_STATE_SET}, new int[]{baseColor & 0x00ffffff | 0xdf000000, baseColor & 0x00ffffff | 0xdf000000});
       setTextColor(textColorStateList);
     } else {
       setTextColor(textColorStateList);
@@ -1082,6 +1180,8 @@ public class MaterialEditText extends AppCompatEditText {
 
   public void setErrorColor(int color) {
     errorColor = color;
+    asteriskPaint.setColor(errorColor);
+    asteriskSpan = new ForegroundColorSpan(errorColor);
     postInvalidate();
   }
 
@@ -1204,6 +1304,11 @@ public class MaterialEditText extends AppCompatEditText {
     return isValid;
   }
 
+  @Override
+  public void setEnabled(boolean enabled) {
+    super.setEnabled(enabled);
+  }
+
   public boolean hasValidators() {
     return this.validators != null && !this.validators.isEmpty();
   }
@@ -1316,22 +1421,27 @@ public class MaterialEditText extends AppCompatEditText {
       if (!isInternalValid()) { // not valid
         paint.setColor(errorColor);
         canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(2), paint);
+      } else if (currentState == STATE_VIEW_ONLY) {
+        paint.setColor(Color.TRANSPARENT);
+        canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(2), paint);
+        paint.setColor(errorColor);
       } else if (!isEnabled()) { // disabled
         paint.setColor(underlineColor != -1 ? underlineColor : baseColor & 0x00ffffff | 0x44000000);
-        float interval = getPixel(1);
-        for (float xOffset = 0; xOffset < getWidth(); xOffset += interval * 3) {
-          canvas.drawRect(startX + xOffset, lineStartY, startX + xOffset + interval, lineStartY + getPixel(1), paint);
+        float interval = getPixel(4);
+        for (float xOffset = 0; xOffset < getWidth(); xOffset += interval * 2) {
+          canvas.drawRect(startX + xOffset, lineStartY, startX + xOffset + interval, lineStartY + getPixel(2), paint);
         }
       } else if (hasFocus()) { // focused
         paint.setColor(primaryColor);
         canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(2), paint);
       } else { // normal
         paint.setColor(underlineColor != -1 ? underlineColor : baseColor & 0x00ffffff | 0x1E000000);
-        canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(1), paint);
+        canvas.drawRect(startX, lineStartY, endX, lineStartY + getPixel(2), paint);
       }
     }
 
     textPaint.setTextSize(bottomTextSize);
+    asteriskPaint.setTextSize(bottomTextSize);
     Paint.FontMetrics textMetrics = textPaint.getFontMetrics();
     float relativeHeight = -textMetrics.ascent - textMetrics.descent;
     float bottomTextPadding = bottomTextSize + textMetrics.ascent + textMetrics.descent;
@@ -1344,14 +1454,14 @@ public class MaterialEditText extends AppCompatEditText {
     }
 
     // draw the bottom text
-    if (textLayout != null) {
+    if (textLayout != null && currentState != STATE_VIEW_ONLY) {
       if (tempErrorText != null || ((helperTextAlwaysShown || hasFocus()) && !TextUtils.isEmpty(helperText))) { // error text or helper text
         textPaint.setColor(tempErrorText != null ? errorColor : helperTextColor != -1 ? helperTextColor : (baseColor & 0x00ffffff | 0x44000000));
         canvas.save();
         if (isRTL()) {
           canvas.translate(endX - textLayout.getWidth(), lineStartY + bottomSpacing - bottomTextPadding);
         } else {
-          canvas.translate(startX + getBottomTextLeftOffset(), lineStartY + bottomSpacing - bottomTextPadding);
+          canvas.translate(startX, lineStartY + bottomSpacing - bottomTextPadding);
         }
         textLayout.draw(canvas);
         canvas.restore();
@@ -1379,11 +1489,20 @@ public class MaterialEditText extends AppCompatEditText {
       int distance = floatingLabelPadding;
       int floatingLabelStartY = (int) (innerPaddingTop + floatingLabelTextSize + floatingLabelPadding - distance * (floatingLabelAlwaysShown ? 1 : floatingLabelFraction) + getScrollY());
 
+      // set error color if error enable
+      if (getError() != null) {
+        textPaint.setColor(errorColor);
+      }
+
       // calculate the alpha
       int alpha = ((int) ((floatingLabelAlwaysShown ? 1 : floatingLabelFraction) * 0xff * (0.74f * focusFraction * (isEnabled() ? 1 : 0) + 0.26f) * (floatingLabelTextColor != -1 ? 1 : Color.alpha(floatingLabelTextColor) / 256f)));
       textPaint.setAlpha(alpha);
+      asteriskPaint.setAlpha(alpha);
 
       // draw the floating label
+      if (isRequire && currentState == STATE_EDIT_ENABLE) {
+        canvas.drawText(ASTERISK, floatingLabelStartX + textPaint.measureText(floatingLabelText.toString()), floatingLabelStartY, asteriskPaint);
+      }
       canvas.drawText(floatingLabelText.toString(), floatingLabelStartX, floatingLabelStartY, textPaint);
     }
 
@@ -1405,6 +1524,7 @@ public class MaterialEditText extends AppCompatEditText {
 
     // draw the original things
     super.onDraw(canvas);
+
   }
 
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
@@ -1522,7 +1642,7 @@ public class MaterialEditText extends AppCompatEditText {
   }
 
   private int checkLength(CharSequence text) {
-    if (lengthChecker==null) return text.length();
+    if (lengthChecker == null) return text.length();
     return lengthChecker.getLength(text);
   }
 }

@@ -5,7 +5,7 @@
     <attr name="met_baseColor" format="color" />
     <!-- The highlight color of the line, and the floating label if the highlightFloatingLabel is true. -->
     <attr name="met_primaryColor" format="color" />
-    <!-- How the floating label should be shown. Default is none -->
+    <!-- How the floating label should be shown. Default is highlight -->
     <attr name="met_floatingLabel">
       <enum name="none" value="0" />
       <enum name="normal" value="1" />
@@ -67,6 +67,15 @@
     <attr name="met_validateOnFocusLost" format="boolean"/>
     <!-- Whether check the characters count at the beginning it's shown. True by default. -->
     <attr name="met_checkCharactersCountAtBeginning" format="boolean"/>
-
+    <!-- The asterisk in the end of label if field require. False by default. -->
+    <attr name="met_isRequire" format="boolean"/>
+    <!-- Description text for field. Visible if field empty -->
+    <attr name="met_hint" format="string"/>
+    <!-- Initial state of the view. View_only by default -->
+    <attr name="met_state">
+      <enum name="view_only" value="1"/>
+      <enum name="edit_enable" value="2"/>
+      <enum name="edit_disable" value="3"/>
+    </attr>
   </declare-styleable>
 </resources>
