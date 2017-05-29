@@ -5,6 +5,7 @@
       <mapping pattern="Jenkinsfile" type="Groovy" />
       <mapping pattern="user_photo_placeholder.png" type="PLAIN_TEXT" />
       <mapping ext="scss" type="PLAIN_TEXT" />
+      <mapping pattern="fragment_wcc_related" type="XML" />
     </extensionMap>
   </component>
 </application>
