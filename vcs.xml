@@ -90,6 +90,10 @@
           <option name="url" value="https://github.com/androidovshchik/ProhibitingSignDetector" />
           <option name="userName" value="" />
         </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://lexleontev@bitbucket.org/funtaz/_apk_fdroid_hantos.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
       </list>
     </option>
     <option name="cloneParentDir" value="$USER_HOME$/Projects" />
