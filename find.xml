@@ -1,9 +1,9 @@
 <application>
   <component name="FindSettings">
-    <option name="customScope" value="Project '_apk_fdroid_hantos'" />
-    <option name="defaultScopeName" value="Project '_apk_fdroid_hantos'" />
+    <option name="customScope" value="Directory '.../app/src/main/java/net/visitech/isobr/framework - [app]'" />
+    <option name="defaultScopeName" value="Directory '.../app/src/main/java/net/visitech/isobr/framework - [app]'" />
     <option name="localWholeWordsOnly" value="true" />
     <option name="LOCAL_WHOLE_WORDS_ONLY" value="true" />
-    <option name="SEARCH_SCOPE" value="Project '_apk_fdroid_hantos'" />
+    <option name="SEARCH_SCOPE" value="Directory '.../app/src/main/java/net/visitech/isobr/framework - [app]'" />
   </component>
 </application>
