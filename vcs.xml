@@ -110,6 +110,10 @@
           <option name="url" value="ssh://git@bitbucket.visitech.local:7999/an/and_maps_only.git" />
           <option name="userName" value="" />
         </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="https://lexleontev@bitbucket.org/funtaz/nd_hantos_android.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
       </list>
     </option>
     <option name="cloneParentDir" value="$USER_HOME$/Projects/visitech/isobr/android" />
